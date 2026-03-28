@@ -49,7 +49,12 @@ internal class ResourceExpressionBuilder
 
     private static IResourceProvider GetGlobalResourceProvider(string classKey)
     {
-        throw new NotImplementedException("GetGlobalResourceProvider");
+        if (string.IsNullOrEmpty(classKey))
+        {
+            return null;
+        }
+
+        return new GlobalResXResourceProvider(classKey);
     }
 
     internal static object GetResourceObject(IResourceProvider resourceProvider,
