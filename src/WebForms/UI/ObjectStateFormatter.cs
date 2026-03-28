@@ -46,6 +46,7 @@ public sealed class ObjectStateFormatter : IStateFormatter, IStateFormatter2
     private const byte Token_Hashtable = 23;
     private const byte Token_HybridDictionary = 24;
     private const byte Token_Type = 25;
+    private const byte Token_GenericDictionary = 26;
     private const byte Token_Unit = 27;
     private const byte Token_EmptyUnit = 28;
     private const byte Token_EventValidationStore = 29;
@@ -441,6 +442,23 @@ public sealed class ObjectStateFormatter : IStateFormatter, IStateFormatter2
                     }
 
                     return table;
+                }
+            case Token_GenericDictionary:
+                {
+                    var dictionaryType = DeserializeType(reader);
+                    var count = reader.Read7BitEncodedInt();
+                    var dictionary = Activator.CreateInstance(dictionaryType) as IDictionary;
+                    if (dictionary == null)
+                    {
+                        throw new InvalidOperationException($"Unsupported dictionary type {dictionaryType?.FullName}");
+                    }
+
+                    for (var i = 0; i < count; i++)
+                    {
+                        dictionary.Add(DeserializeValue(reader), DeserializeValue(reader));
+                    }
+
+                    return dictionary;
                 }
             case Token_Type:
                 return DeserializeType(reader);
@@ -855,15 +873,22 @@ public sealed class ObjectStateFormatter : IStateFormatter, IStateFormatter2
                 if (value is IDictionary)
                 {
                     var canSerializeDictionary = false;
+                    var dictionaryValueType = value.GetType();
 
-                    if (value.GetType() == typeof(Hashtable))
+                    if (dictionaryValueType == typeof(Hashtable))
                     {
                         writer.Write(Token_Hashtable);
                         canSerializeDictionary = true;
                     }
-                    else if (value.GetType() == typeof(HybridDictionary))
+                    else if (dictionaryValueType == typeof(HybridDictionary))
                     {
                         writer.Write(Token_HybridDictionary);
+                        canSerializeDictionary = true;
+                    }
+                    else if (dictionaryValueType.IsGenericType && dictionaryValueType.GetGenericTypeDefinition() == typeof(Dictionary<,>))
+                    {
+                        writer.Write(Token_GenericDictionary);
+                        SerializeType(writer, dictionaryValueType);
                         canSerializeDictionary = true;
                     }
 
