@@ -26,10 +26,7 @@
       <_AnalyzerPrefix>analyzers/dotnet/cs/roslyn4.8/</_AnalyzerPrefix>
     </PropertyGroup>
     <ItemGroup>
-      <None Include="%(WebFormsGeneratorOutputs.Identity)"
-            Link="$(_AnalyzerPrefix)%(WebFormsGeneratorOutputs.RelativePath)"
-            PackagePath="$(_AnalyzerPrefix)%(WebFormsGeneratorOutputs.RelativePath)"
-            Pack="true" />
+      <None Include="%(WebFormsGeneratorOutputs.Identity)" Link="$(_AnalyzerPrefix)%(WebFormsGeneratorOutputs.RelativePath)" PackagePath="$(_AnalyzerPrefix)%(WebFormsGeneratorOutputs.RelativePath)" Pack="true" />
     </ItemGroup>
   </Target>
 
@@ -42,10 +39,7 @@
       <_AspNetCompilerPrefix8>tools/net10.0/aspnet_compiler/</_AspNetCompilerPrefix8>
     </PropertyGroup>
     <ItemGroup>
-      <None Include="%(AspNetCompilerOutputs8.Identity)"
-            Link="$(_AspNetCompilerPrefix8)%(AspNetCompilerOutputs8.RelativePath)"
-            PackagePath="$(_AspNetCompilerPrefix8)%(AspNetCompilerOutputs8.RelativePath)"
-            Pack="true" />
+      <None Include="%(AspNetCompilerOutputs8.Identity)" Link="$(_AspNetCompilerPrefix8)%(AspNetCompilerOutputs8.RelativePath)" PackagePath="$(_AspNetCompilerPrefix8)%(AspNetCompilerOutputs8.RelativePath)" Pack="true" />
     </ItemGroup>
   </Target>
 

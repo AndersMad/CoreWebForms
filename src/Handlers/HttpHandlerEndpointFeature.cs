@@ -43,6 +43,8 @@ internal sealed class HttpHandlerEndpointFeature : IHttpHandlerFeature, IEndpoin
 
     IHttpHandler? IHttpHandlerFeature.Previous => _previous.Handler;
 
+    bool IHttpHandlerFeature.IsEndpoint => _current.Endpoint is not null;
+
     private struct Container(HttpContextCore context, Endpoint? endpoint = null, IHttpHandler? handler = null)
     {
         public Endpoint? Endpoint
