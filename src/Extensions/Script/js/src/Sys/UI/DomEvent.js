@@ -150,7 +150,7 @@ var $addHandler = (Sys.UI.DomEvent.addHandler = function (
   }
 });
 
-var $addHandlers = (Sys.UI.DomEvent.addHandlers = function (
+window.$addHandlers = (Sys.UI.DomEvent.addHandlers = function (
   element,
   events,
   handlerOwner,
@@ -181,7 +181,7 @@ var $addHandlers = (Sys.UI.DomEvent.addHandlers = function (
   }
 });
 
-var $clearHandlers = (Sys.UI.DomEvent.clearHandlers = function (element) {
+window.$clearHandlers = (Sys.UI.DomEvent.clearHandlers = function (element) {
   /// <summary>
   ///   Clears all the event handlers that were added to the element.
   /// </summary>

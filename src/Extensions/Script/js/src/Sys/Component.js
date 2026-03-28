@@ -167,7 +167,7 @@ function Sys$Component$_setReferences(component, references) {
   }
 }
 
-var $create = (Sys.Component.create = function (
+window.$create = (Sys.Component.create = function (
   type,
   properties,
   events,

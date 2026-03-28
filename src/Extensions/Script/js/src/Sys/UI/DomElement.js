@@ -44,7 +44,7 @@ Sys.UI.DomElement.getBounds = function (element) {
   );
 };
 
-var $get = (Sys.UI.DomElement.getElementById = function (id, element) {
+window.$get = (Sys.UI.DomElement.getElementById = function (id, element) {
   /// <summary>Finds an element by id.</summary>
   /// <param name="id" type="String">The id of the element to find.</param>
   /// <param name="element" domElement="true" optional="true" mayBeNull="true"/>
