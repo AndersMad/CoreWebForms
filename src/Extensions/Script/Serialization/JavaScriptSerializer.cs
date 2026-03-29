@@ -32,15 +32,18 @@ public class JavaScriptSerializer
     private readonly JsonSerializerOptions _options = new()
     {
         MaxDepth = DefaultRecursionLimit,
+        PropertyNameCaseInsensitive = true,
     };
 
     public JavaScriptSerializer()
     {
+        _options.Converters.Add(new JsonStringEnumConverter());
     }
 
     public JavaScriptSerializer(JavaScriptTypeResolver? resolver)
     {
         _typeResolver = resolver;
+        _options.Converters.Add(new JsonStringEnumConverter());
     }
 
     internal static string SerializeInternal(object o) => _defaultJavaScriptSerializer.Serialize(o);
