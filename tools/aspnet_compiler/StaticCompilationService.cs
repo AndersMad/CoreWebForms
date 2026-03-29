@@ -40,11 +40,16 @@ internal sealed class StaticCompilationService : BackgroundService
             var compilation = new PersistedCompilation(_options.Value);
             using var result = _compiler.CompilePages(compilation, stoppingToken);
 
-            var pagesPath = Path.Combine(_options.Value.TargetDirectory, "webforms.pages.json");
-            File.WriteAllText(pagesPath, JsonSerializer.Serialize(compilation.Pages, jsonOptions));
-
             var errorsPath = Path.Combine(_options.Value.TargetDirectory, "webforms.errors.json");
             File.WriteAllText(errorsPath, JsonSerializer.Serialize(compilation.Errors, jsonOptions));
+
+            if (compilation.Errors.Count > 0)
+            {
+                throw new InvalidOperationException($"There were {compilation.Errors.Count} WebForms compilation error(s).");
+            }
+
+            var pagesPath = Path.Combine(_options.Value.TargetDirectory, "webforms.pages.json");
+            File.WriteAllText(pagesPath, JsonSerializer.Serialize(compilation.Pages, jsonOptions));
 
             _logger.LogInformation("Completed compilation");
         }
@@ -76,12 +81,10 @@ internal sealed class StaticCompilationService : BackgroundService
             => CreateStream(GetAssemblyPath(assemblyName, isPdb: true));
 
         Stream ICompilationStrategy.CreatePeStream(string route, string typeName, string assemblyName)
-        {
-            Pages.Add(new(route, typeName, assemblyName));
-            return CreateStream(GetAssemblyPath(assemblyName));
-        }
+            => CreateStream(GetAssemblyPath(assemblyName), () => Pages.Add(new(route, typeName, assemblyName)));
 
-        private static Stream CreateStream(string path) => File.Open(path, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
+        private static Stream CreateStream(string path, Action? onCommit = null)
+            => new TransactionalFileStream(path, onCommit);
 
         private string GetAssemblyPath(string assemblyName, bool isPdb = false)
         {
@@ -94,6 +97,83 @@ internal sealed class StaticCompilationService : BackgroundService
             Errors.Add(new(route, errors.ConvertToErrors().ToList()));
 
             return true;
+        }
+
+        private sealed class TransactionalFileStream : Stream, ICompilationOutputStream
+        {
+            private readonly string _finalPath;
+            private readonly string _tempPath;
+            private readonly FileStream _stream;
+            private readonly Action? _onCommit;
+            private bool _committed;
+            private bool _disposed;
+
+            public TransactionalFileStream(string finalPath, Action? onCommit)
+            {
+                _finalPath = finalPath;
+                _onCommit = onCommit;
+                Directory.CreateDirectory(Path.GetDirectoryName(finalPath)!);
+                _tempPath = $"{finalPath}.{Guid.NewGuid():N}.tmp";
+                _stream = File.Open(_tempPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
+            }
+
+            public void Commit()
+            {
+                ThrowIfDisposed();
+
+                if (_committed)
+                {
+                    return;
+                }
+
+                _committed = true;
+                _onCommit?.Invoke();
+            }
+
+            public override bool CanRead => _stream.CanRead;
+            public override bool CanSeek => _stream.CanSeek;
+            public override bool CanWrite => _stream.CanWrite;
+            public override long Length => _stream.Length;
+            public override long Position { get => _stream.Position; set => _stream.Position = value; }
+
+            public override void Flush() => _stream.Flush();
+            public override int Read(byte[] buffer, int offset, int count) => _stream.Read(buffer, offset, count);
+            public override long Seek(long offset, SeekOrigin origin) => _stream.Seek(offset, origin);
+            public override void SetLength(long value) => _stream.SetLength(value);
+            public override void Write(byte[] buffer, int offset, int count) => _stream.Write(buffer, offset, count);
+
+            protected override void Dispose(bool disposing)
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                if (disposing)
+                {
+                    _stream.Dispose();
+
+                    if (_committed)
+                    {
+                        File.Move(_tempPath, _finalPath, overwrite: true);
+                    }
+                    else
+                    {
+                        if (File.Exists(_tempPath))
+                        {
+                            File.Delete(_tempPath);
+                        }
+                    }
+                }
+
+                _disposed = true;
+                base.Dispose(disposing);
+            }
+
+            private void ThrowIfDisposed()
+            {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+            }
         }
     }
 }

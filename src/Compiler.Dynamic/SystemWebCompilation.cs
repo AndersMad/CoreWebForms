@@ -145,16 +145,17 @@ internal sealed class SystemWebCompilation : IDisposable, IWebFormsCompiler
                 if (dep is string p && Files.GetFileInfo(p) is { Exists: true, IsDirectory: false } file)
                 {
                     using var stream = file.CreateReadStream();
+                    var sourcePath = string.IsNullOrEmpty(file.PhysicalPath) ? p : file.PhysicalPath;
 
                     if (p.EndsWith(compiler.Provider.FileExtension, StringComparison.OrdinalIgnoreCase))
                     {
                         var sourceText = SourceText.From(stream, canBeEmbedded: true);
-                        trees.Add(compiler.ParseText(sourceText, p, cancellationToken: token));
-                        embedded.Add(EmbeddedText.FromSource(p, sourceText));
+                        trees.Add(compiler.ParseText(sourceText, sourcePath, cancellationToken: token));
+                        embedded.Add(EmbeddedText.FromSource(sourcePath, sourceText));
                     }
                     else
                     {
-                        embedded.Add(EmbeddedText.FromStream(p, stream));
+                        embedded.Add(EmbeddedText.FromStream(sourcePath, stream));
                     }
                 }
             }
@@ -250,6 +251,9 @@ internal sealed class SystemWebCompilation : IDisposable, IWebFormsCompiler
 
             if (assembly.GetType(typeName) is { } type)
             {
+                CommitOutput(peStream);
+                CommitOutput(pdbStream);
+
                 return new CompiledPage(virtualPath)
                 {
                     MetadataReference = MetadataReference.CreateFromStream(peStream),
@@ -259,6 +263,14 @@ internal sealed class SystemWebCompilation : IDisposable, IWebFormsCompiler
         }
 
         throw new InvalidOperationException("No type found");
+    }
+
+    private static void CommitOutput(Stream stream)
+    {
+        if (stream is ICompilationOutputStream outputStream)
+        {
+            outputStream.Commit();
+        }
     }
 
     private ICompiler GetProvider(CompilerType compiler)

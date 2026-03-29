@@ -29,3 +29,8 @@ public interface ICompilationResult : IDisposable
 {
     IWebFormsCompilationFeature Types { get; }
 }
+
+internal interface ICompilationOutputStream
+{
+    void Commit();
+}
