@@ -1901,7 +1901,7 @@ public partial class Control : IComponent, IParserAccessor, IDataBindingsAccesso
                 }
                 control._page = Page;
 
-                await control.InitRecursiveAsync(namingContainer, page);
+                await control.InitRecursiveAsync(namingContainer, page).ConfigureAwait(false);
             }
             _controls.SetCollectionReadOnly(oldmsg);
 

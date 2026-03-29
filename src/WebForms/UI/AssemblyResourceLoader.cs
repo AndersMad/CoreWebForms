@@ -1,5 +1,7 @@
 // MIT License.
 
+#nullable enable
+
 using System.Globalization;
 using System.Reflection;
 using System.Web.Util;
@@ -14,7 +16,7 @@ internal class AssemblyResourceLoader
         ArgumentNullException.ThrowIfNull(assembly);
         ArgumentNullException.ThrowIfNull(cdnPath);
 
-        AssemblyName assemblyName = new(assembly.FullName);
+        AssemblyName assemblyName = new(assembly.FullName!);
 
         return string.Format(
             CultureInfo.InvariantCulture,
@@ -89,7 +91,7 @@ internal class AssemblyResourceLoader
 
     private static string? GetCdnPath(string resourceName, Assembly assembly, bool secureConnection)
     {
-        string cdnPath = secureConnection
+        string? cdnPath = secureConnection
             ? FindWebResourceAttribute(assembly, resourceName)?.CdnPathSecureConnection
             : FindWebResourceAttribute(assembly, resourceName)?.CdnPath;
 

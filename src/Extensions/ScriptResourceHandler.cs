@@ -1,9 +1,10 @@
 // MIT License.
 
+#nullable enable
+
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.Loader;
-using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web.UI;
@@ -85,7 +86,7 @@ internal sealed class ScriptResourceHandler : IScriptResourceHandler
         using var ms = new MemoryStream();
         using var writer = new BinaryWriter(ms);
 
-        writer.Write(assembly.FullName);
+        writer.Write(assembly.FullName!);
         writer.Write(resourceName);
         writer.Write(culture.Name);
         writer.Write(zip);
