@@ -27,6 +27,14 @@
 
   <ItemGroup>
     <PackageReference Include="System.CodeDom" Version="10.0.5" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalSystemWebAdaptersSource)' == 'true' and Exists('..\..\..\systemweb-adapters\src\Microsoft.AspNetCore.SystemWebAdapters\Microsoft.AspNetCore.SystemWebAdapters.csproj')">
+    <ProjectReference Include="..\..\..\systemweb-adapters\src\Microsoft.AspNetCore.SystemWebAdapters\Microsoft.AspNetCore.SystemWebAdapters.csproj" />
+    <ProjectReference Include="..\..\..\systemweb-adapters\src\Microsoft.AspNetCore.SystemWebAdapters.CoreServices\Microsoft.AspNetCore.SystemWebAdapters.CoreServices.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalSystemWebAdaptersSource)' != 'true' or !Exists('..\..\..\systemweb-adapters\src\Microsoft.AspNetCore.SystemWebAdapters\Microsoft.AspNetCore.SystemWebAdapters.csproj')">
     <PackageReference Include="Microsoft.AspNetCore.SystemWebAdapters" Version="2.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.SystemWebAdapters.CoreServices" Version="2.3.0" />
   </ItemGroup>
@@ -36,6 +44,5 @@
     <ProjectReference Include="..\HtmlTextWriter\HtmlTextWriter.csproj" />
     <ProjectReference Include="..\Routing\Routing.csproj" />
   </ItemGroup>
-
 
 </Project>

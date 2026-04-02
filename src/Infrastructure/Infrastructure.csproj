@@ -9,9 +9,12 @@
     <AssemblyVersion>1.1.0.0</AssemblyVersion>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.SystemWebAdapters" Version="2.3.0" />
+  <ItemGroup Condition="'$(UseLocalSystemWebAdaptersSource)' == 'true' and Exists('..\..\..\systemweb-adapters\src\Microsoft.AspNetCore.SystemWebAdapters\Microsoft.AspNetCore.SystemWebAdapters.csproj')">
+    <ProjectReference Include="..\..\..\systemweb-adapters\src\Microsoft.AspNetCore.SystemWebAdapters\Microsoft.AspNetCore.SystemWebAdapters.csproj" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(UseLocalSystemWebAdaptersSource)' != 'true' or !Exists('..\..\..\systemweb-adapters\src\Microsoft.AspNetCore.SystemWebAdapters\Microsoft.AspNetCore.SystemWebAdapters.csproj')">
+    <PackageReference Include="Microsoft.AspNetCore.SystemWebAdapters" Version="2.3.0" />
+  </ItemGroup>
 
 </Project>

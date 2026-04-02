@@ -10,7 +10,12 @@
     <WarningsAsErrors>Nullable</WarningsAsErrors>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(UseLocalSystemWebAdaptersSource)' == 'true' and Exists('..\..\..\systemweb-adapters\src\Microsoft.AspNetCore.SystemWebAdapters.CoreServices\Microsoft.AspNetCore.SystemWebAdapters.CoreServices.csproj')">
+    <ProjectReference Include="..\..\..\systemweb-adapters\src\Microsoft.AspNetCore.SystemWebAdapters.CoreServices\Microsoft.AspNetCore.SystemWebAdapters.CoreServices.csproj" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalSystemWebAdaptersSource)' != 'true' or !Exists('..\..\..\systemweb-adapters\src\Microsoft.AspNetCore.SystemWebAdapters.CoreServices\Microsoft.AspNetCore.SystemWebAdapters.CoreServices.csproj')">
     <PackageReference Include="Microsoft.AspNetCore.SystemWebAdapters.CoreServices" Version="2.3.0" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
