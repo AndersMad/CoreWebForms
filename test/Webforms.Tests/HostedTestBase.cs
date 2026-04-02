@@ -1,5 +1,6 @@
 // MIT License.
 
+using System.Web;
 using System.Web.UI;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -35,6 +36,7 @@ public abstract class HostedTestBase
                     services.AddRouting();
                     services.AddSystemWebAdapters()
                         .AddWrappedAspNetCoreSession()
+                        .AddHttpApplication<HttpApplication>()
                         .AddHttpHandler<TPage>("/")
                         .AddWebForms();
 
