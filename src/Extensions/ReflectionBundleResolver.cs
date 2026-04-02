@@ -1,6 +1,7 @@
 // MIT License.
 
 using System.Reflection;
+using System.Runtime.Loader;
 using Microsoft.Extensions.Logging;
 
 namespace WebForms.Extensions;
@@ -18,9 +19,7 @@ internal sealed class ReflectionBundleResolver : IBundleResolver
     {
         try
         {
-            var assembly = Assembly.Load("System.Web.Optimization");
-
-            if (assembly.GetType("System.Web.Optimization.BundleResolver") is { } type)
+            if (FindBundleResolverType() is { } type)
             {
                 PropertyInfo bundleResolverCurrentProperty = type.GetProperty("Current", BindingFlags.Static | BindingFlags.Public);
                 if (bundleResolverCurrentProperty is { GetMethod: { } get })
@@ -33,6 +32,31 @@ internal sealed class ReflectionBundleResolver : IBundleResolver
         catch (Exception ex)
         {
             logger.LogInformation(ex, "Could not find System.Web.Optimization for bundle usage");
+        }
+    }
+
+    private static Type FindBundleResolverType()
+    {
+        const string typeName = "System.Web.Optimization.BundleResolver";
+
+        foreach (AssemblyLoadContext context in AssemblyLoadContext.All)
+        {
+            foreach (Assembly assembly in context.Assemblies)
+            {
+                if (assembly.GetType(typeName, throwOnError: false) is { } type)
+                {
+                    return type;
+                }
+            }
+        }
+
+        try
+        {
+            return Assembly.Load("System.Web.Optimization").GetType(typeName, throwOnError: false);
+        }
+        catch
+        {
+            return null;
         }
     }
 
