@@ -168,7 +168,7 @@ internal sealed class SystemWebCompilation : IDisposable, IWebFormsCompiler
 
             var compilation = compiler.CreateCompilation(typeName, trees, references!);
 
-            var compiled = CreateCompiledPage(compiledPages, compilation, currentPath, typeName, embedded, assemblies!, token);
+            var compiled = CreateCompiledPage(compiledPages, compilation, currentPath, typeName, embedded, assemblies!, references!, token);
 
             _logger.LogInformation("Compiled {Path}", currentPath);
 
@@ -199,6 +199,7 @@ internal sealed class SystemWebCompilation : IDisposable, IWebFormsCompiler
         string typeName,
         IEnumerable<EmbeddedText> embedded,
         IEnumerable<Assembly> assemblies,
+        IEnumerable<MetadataReference> references,
         CancellationToken token)
     {
         using var peStream = cu.Strategy.CreatePeStream(virtualPath.Path, typeName, compilation.AssemblyName!);
@@ -244,7 +245,9 @@ internal sealed class SystemWebCompilation : IDisposable, IWebFormsCompiler
             peStream.Position = 0;
             pdbStream.Position = 0;
 
-            var context = new PageAssemblyLoadContext(virtualPath, assemblies, _factory.CreateLogger<PageAssemblyLoadContext>());
+            var referencePaths = _metadata.ReferencePaths;
+
+            var context = new PageAssemblyLoadContext(virtualPath, assemblies, referencePaths, _factory.CreateLogger<PageAssemblyLoadContext>());
             var assembly = context.LoadFromStream(peStream, pdbStream);
 
             peStream.Position = 0;
@@ -260,6 +263,10 @@ internal sealed class SystemWebCompilation : IDisposable, IWebFormsCompiler
                     Type = type,
                 };
             }
+
+            var definedTypes = string.Join(", ", assembly.GetTypes().Select(static t => t.FullName));
+            _logger.LogError("Generated assembly for {Route} did not contain expected type {TypeName}. Defined types: {DefinedTypes}",
+                virtualPath, typeName, definedTypes);
         }
 
         throw new InvalidOperationException("No type found");

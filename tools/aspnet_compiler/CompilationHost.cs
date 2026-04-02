@@ -11,13 +11,14 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
+using Microsoft.Extensions.Options;
 using WebForms.Compiler.Dynamic;
 
 namespace WebForms.Compiler;
 
 internal sealed class CompilationHost
 {
-    public static Task RunAsync(DirectoryInfo path, DirectoryInfo targetDir, FileInfo[] references, bool isDebug)
+    public static Task RunAsync(DirectoryInfo path, DirectoryInfo targetDir, FileInfo[] references, string[] controls, bool isDebug)
         => Host.CreateDefaultBuilder()
             .ConfigureAppConfiguration((ctx, _) =>
             {
@@ -50,6 +51,21 @@ internal sealed class CompilationHost
                     {
                         options.TargetDirectory = targetDir.FullName;
                         options.InputDirectory = path.FullName;
+
+                        foreach (var control in controls)
+                        {
+                            var parts = control.Split('|', 3);
+
+                            if (parts.Length == 3)
+                            {
+                                options.ControlRegistrations.Add(new()
+                                {
+                                    TagPrefix = parts[0],
+                                    NamespaceName = parts[1],
+                                    AssemblyName = parts[2],
+                                });
+                            }
+                        }
                     })
                     .ValidateDataAnnotations();
 
@@ -60,7 +76,15 @@ internal sealed class CompilationHost
                 services.AddHostedService<StaticCompilationService>();
 
                 services.AddOptions<PageCompilationOptions>()
-                    .Configure(options => options.IsDebug = isDebug);
+                    .Configure<IOptions<StaticCompilationOptions>>((options, staticCompilation) =>
+                    {
+                        options.IsDebug = isDebug;
+
+                        foreach (var control in staticCompilation.Value.ControlRegistrations)
+                        {
+                            options.RegisterPrefix(control.TagPrefix, control.NamespaceName, control.AssemblyName);
+                        }
+                    });
 
                 services.AddOptions<SystemWebAdaptersOptions>().Configure(options =>
                 {

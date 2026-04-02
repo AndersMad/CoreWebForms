@@ -11,6 +11,7 @@ namespace WebForms.Compiler.Dynamic;
 internal sealed class StaticControlCollection : AssemblyLoadContext, IDisposable, ITypeResolutionService, IMetadataProvider
 {
     private readonly List<MetadataReference> _reference = [];
+    private readonly Dictionary<string, string> _assemblyPaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly Action? _dispose;
 
     public StaticControlCollection(IEnumerable<string> paths)
@@ -18,6 +19,9 @@ internal sealed class StaticControlCollection : AssemblyLoadContext, IDisposable
     {
         foreach (var path in paths)
         {
+            var assemblyName = Path.GetFileNameWithoutExtension(path);
+            _assemblyPaths[assemblyName] = path;
+
             var metadata = AssemblyMetadata.CreateFromFile(path);
             _dispose += metadata.Dispose;
 
@@ -57,6 +61,41 @@ internal sealed class StaticControlCollection : AssemblyLoadContext, IDisposable
     public IEnumerable<Assembly> ControlAssemblies => [typeof(Page).Assembly, .. Assemblies];
 
     public IEnumerable<MetadataReference> References => _reference;
+
+    public IEnumerable<string> ReferencePaths => _assemblyPaths.Values.Distinct(StringComparer.OrdinalIgnoreCase);
+
+    protected override Assembly? Load(AssemblyName assemblyName)
+    {
+        foreach (var assembly in Assemblies)
+        {
+            if (AssemblyName.ReferenceMatchesDefinition(assemblyName, assembly.GetName()))
+            {
+                return assembly;
+            }
+        }
+
+        foreach (var assembly in AssemblyLoadContext.Default.Assemblies)
+        {
+            if (AssemblyName.ReferenceMatchesDefinition(assemblyName, assembly.GetName()))
+            {
+                return assembly;
+            }
+        }
+
+        if (_assemblyPaths.TryGetValue(assemblyName.Name ?? string.Empty, out var path))
+        {
+            try
+            {
+                return LoadFromAssemblyPath(path);
+            }
+            catch (BadImageFormatException)
+            {
+                return null;
+            }
+        }
+
+        return null;
+    }
 
     public void Dispose() => _dispose?.Invoke();
 

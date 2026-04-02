@@ -12,6 +12,10 @@ var references = new Option<FileInfo[]>("--references", "-r")
 {
     Description = "Specifies the reference assemblies for the application",
 };
+var controls = new Option<string[]>("--controls", "-c")
+{
+    Description = "Specifies explicit tag prefix registrations in the format prefix|namespace|assembly",
+};
 var target = new Argument<DirectoryInfo>("targetDir")
 {
     Description = "Specifies the path to the root directory of the application",
@@ -25,6 +29,7 @@ var rootCommand = new RootCommand("WebForms compilation");
 rootCommand.Options.Add(path);
 rootCommand.Options.Add(isDebug);
 rootCommand.Options.Add(references);
+rootCommand.Options.Add(controls);
 rootCommand.Arguments.Add(target);
 
 rootCommand.SetAction(async parseResult =>
@@ -32,6 +37,7 @@ rootCommand.SetAction(async parseResult =>
     var pathValue = parseResult.GetValue(path);
     var targetValue = parseResult.GetValue(target);
     var referencesValue = parseResult.GetValue(references) ?? [];
+    var controlsValue = parseResult.GetValue(controls) ?? [];
     var isDebugValue = parseResult.GetValue(isDebug);
 
     ArgumentNullException.ThrowIfNull(pathValue);
@@ -42,7 +48,7 @@ rootCommand.SetAction(async parseResult =>
         targetValue.Create();
     }
 
-    await CompilationHost.RunAsync(pathValue, targetValue, referencesValue, isDebugValue).ConfigureAwait(false);
+    await CompilationHost.RunAsync(pathValue, targetValue, referencesValue, controlsValue, isDebugValue).ConfigureAwait(false);
 });
 
 await rootCommand.Parse(args).InvokeAsync().ConfigureAwait(false);

@@ -52,6 +52,11 @@ internal sealed class DynamicControlCollection : ITypeResolutionService, IMetada
 
     IEnumerable<Assembly> IMetadataProvider.ControlAssemblies => _controls.Values;
 
+    IEnumerable<string> IMetadataProvider.ReferencePaths => _metadataReferences.Keys
+        .Select(static name => name.Name)
+        .Where(static name => !string.IsNullOrWhiteSpace(name))
+        .SelectMany(name => Directory.EnumerateFiles(AppContext.BaseDirectory, $"{name}.dll"));
+
     Assembly? ITypeResolutionService.GetAssembly(AssemblyName assemblyName)
     {
         return _context.LoadFromAssemblyName(assemblyName);

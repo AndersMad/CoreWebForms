@@ -10,4 +10,6 @@ internal interface IMetadataProvider
     IEnumerable<MetadataReference> References { get; }
 
     IEnumerable<Assembly> ControlAssemblies { get; }
+
+    IEnumerable<string> ReferencePaths { get; }
 }

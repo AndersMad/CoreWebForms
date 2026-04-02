@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.SystemWebAdapters.HttpHandlers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using WebForms.Features;
 using WebForms.Internal;
@@ -93,10 +94,12 @@ public static class CompiledWebFormsPageExtensions
     {
         private readonly Lazy<Dictionary<string, (IHttpHandlerMetadata Metadata, Type type)>> _metadata;
         private readonly IWebHostEnvironment _env;
+        private readonly ILogger<CompiledReflectionWebFormsPage> _logger;
 
-        public CompiledReflectionWebFormsPage(IWebHostEnvironment env)
+        public CompiledReflectionWebFormsPage(IWebHostEnvironment env, ILogger<CompiledReflectionWebFormsPage> logger)
         {
             _env = env;
+            _logger = logger;
             _metadata = new(() => ParseHandlers(), isThreadSafe: true);
         }
 
@@ -114,6 +117,7 @@ public static class CompiledWebFormsPageExtensions
 
             if (GetWebFormsFile(_env) is { } path)
             {
+                _logger.LogInformation("Loading compiled WebForms manifest {Path} for application {ApplicationName}", path, _env.ApplicationName);
                 var results = JsonSerializer.Deserialize<WebFormsDetails[]>(File.ReadAllText(path));
                 var context = new WebFormsAssemblyLoadContext();
 
@@ -121,12 +125,27 @@ public static class CompiledWebFormsPageExtensions
                 {
                     foreach (var type in results)
                     {
-                        if (context.LoadFromAssemblyName(new AssemblyName(type.Assembly)).GetType(type.Type) is { } pageType)
+                        try
                         {
-                            result.Add(type.Path, (HandlerMetadata.Create(type.Path, pageType), pageType));
+                            if (context.LoadFromAssemblyName(new AssemblyName(type.Assembly)).GetType(type.Type) is { } pageType)
+                            {
+                                result.Add(type.Path, (HandlerMetadata.Create(type.Path, pageType), pageType));
+                            }
+                            else
+                            {
+                                _logger.LogWarning("Compiled WebForms type {TypeName} from {AssemblyName} for {VirtualPath} could not be loaded", type.Type, type.Assembly, type.Path);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed loading compiled WebForms type {TypeName} from {AssemblyName} for {VirtualPath}", type.Type, type.Assembly, type.Path);
                         }
                     }
                 }
+            }
+            else
+            {
+                _logger.LogWarning("No compiled WebForms manifest found for application {ApplicationName}", _env.ApplicationName);
             }
 
             return result;
@@ -138,7 +157,7 @@ public static class CompiledWebFormsPageExtensions
 
             var fullPath = Path.Combine(env.ContentRootPath, path);
 
-            if (!File.Exists(fullPath) && env.IsDevelopment())
+            if (!File.Exists(fullPath))
             {
                 fullPath = Path.Combine(AppContext.BaseDirectory, path);
             }
@@ -176,7 +195,22 @@ public static class CompiledWebFormsPageExtensions
 
             protected override Assembly Load(AssemblyName assemblyName)
             {
+                foreach (var assembly in AssemblyLoadContext.Default.Assemblies)
+                {
+                    if (AssemblyName.ReferenceMatchesDefinition(assemblyName, assembly.GetName()))
+                    {
+                        return assembly;
+                    }
+                }
+
                 var path = Path.Combine(AppContext.BaseDirectory, "webforms", assemblyName.Name + ".dll");
+
+                if (File.Exists(path))
+                {
+                    return LoadFromAssemblyPath(path);
+                }
+
+                path = Path.Combine(AppContext.BaseDirectory, assemblyName.Name + ".dll");
 
                 if (File.Exists(path))
                 {

@@ -61,6 +61,7 @@
       <__AspNetCompileRsp Include="&quot;$(_WebFormsTempDir)&quot;" />
       <__AspNetCompileRsp Include="-r &quot;%(ReferencePath.Identity)&quot;" />
       <__AspNetCompileRsp Include="-r &quot;%(IntermediateAssembly.Identity)&quot;" />
+      <__AspNetCompileRsp Include="-c &quot;%(WebFormsControlRegistration.Identity)|%(WebFormsControlRegistration.NamespaceName)|%(WebFormsControlRegistration.AssemblyName)&quot;" />
     </ItemGroup>
 
     <WriteLinesToFile File="$(__AspNetCompileRspFilePath)" Lines="@(__AspNetCompileRsp)" Overwrite="true" />
