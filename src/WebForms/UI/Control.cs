@@ -959,11 +959,17 @@ public partial class Control : IComponent, IParserAccessor, IDataBindingsAccesso
     ]
     public Page Page
     {
-        get => page ??= HttpContext.Current.CurrentHandler as Page ?? throw new InvalidOperationException("No page available");
-        set => page = value;
-    }
+        get
+        {
+            if (_page == null && Parent != null)
+            {
+                _page = Parent.Page;
+            }
 
-    private Page page;
+            return _page;
+        }
+        set => _page = value;
+    }
 
     internal RouteCollection RouteCollection
     {

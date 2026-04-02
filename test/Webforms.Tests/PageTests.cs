@@ -41,6 +41,28 @@ public class PageTests : HostedTestBase
     }
 
     [TestMethod]
+    public void ChildControlPageFallsBackToParentPage()
+    {
+        var page = new Page1();
+        var form = new HtmlForm();
+        var child = new TextBox();
+
+        page.Controls.Add(form);
+        form.Controls.Add(child);
+        child.Page = null;
+
+        Assert.AreSame(page, child.Page);
+    }
+
+    [TestMethod]
+    public void PageReferencesItself()
+    {
+        var page = new Page1();
+
+        Assert.AreSame(page, page.Page);
+    }
+
+    [TestMethod]
     [Ignore("Currently not working")]
     public async Task PageWithForm()
     {
