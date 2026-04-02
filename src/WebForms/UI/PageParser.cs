@@ -6,6 +6,11 @@ using System.Web.Compilation;
 using System.Web.Configuration;
 using System.Web.Util;
 
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.SystemWebAdapters;
+using Microsoft.Extensions.DependencyInjection;
+using WebForms.Internal;
+
 /*
  * Implements the ASP.NET template parser
  *
@@ -100,49 +105,49 @@ public sealed class PageParser : TemplateControlParser
     private static IHttpHandler GetCompiledPageInstance(VirtualPath virtualPath,
         string inputFile, HttpContext context)
     {
-
-        // This is a hacky API that only exists to support web service's
-        // DefaultWsdlHelpGenerator.aspx, which doesn't live under the app root.
-        // To make this work, we add an explicit mapping from the virtual path
-        // to the stream of the passed in file
-
-        // Make it relative to the current request if necessary
-#if PORT_REQUEST
-        if (context != null)
+        if (context != null && virtualPath.IsRelative)
         {
-            virtualPath = context.Request.FilePathObject.Combine(virtualPath);
+            virtualPath = context.Request.CurrentExecutionFilePathObject().Combine(virtualPath);
         }
-
-        object virtualPathToFileMappingState = null;
-        try
+        var resolvedPath = ResolveCompiledPath(virtualPath, inputFile, context);
+        var activeContext = context ?? HttpContext.Current;
+        if (activeContext == null)
         {
-            try
-            {
-                // If there is a physical path, we need to connect the virtual path to it, so that
-                // the build system will use the right input file for the virtual path.
-                if (inputFile != null)
-                {
-                    virtualPathToFileMappingState = HostingEnvironment.AddVirtualPathToFileMapping(
-                        virtualPath, inputFile);
-                }
-
-                BuildResultCompiledType result = (BuildResultCompiledType)BuildManager.GetVPathBuildResult(
-                    context, virtualPath, false /*noBuild*/, true /*allowCrossApp*/, true /*allowBuildInPrecompile*/);
-                return (IHttpHandler)HttpRuntime.CreatePublicInstance(result.ResultType);
-            }
-            finally
-            {
-                if (virtualPathToFileMappingState != null)
-                    HostingEnvironment.ClearVirtualPathToFileMapping(virtualPathToFileMappingState);
-            }
+            return null;
         }
-        catch
+        var factory = activeContext.GetTypedWebObjectForPath(resolvedPath);
+        if (factory == null)
         {
-            throw;
+            return null;
         }
-#else
-        throw new NotImplementedException();
-#endif
+        return (IHttpHandler)factory.CreateInstance();
+    }
+    private static VirtualPath ResolveCompiledPath(VirtualPath virtualPath, string inputFile, HttpContext context)
+    {
+        if (string.IsNullOrEmpty(inputFile) || !Path.IsPathRooted(inputFile))
+        {
+            return virtualPath;
+        }
+        var activeContext = context ?? HttpContext.Current;
+        if (activeContext == null)
+        {
+            return virtualPath;
+        }
+        var env = activeContext.AsAspNetCore().RequestServices.GetService<IWebHostEnvironment>();
+        if (env == null || string.IsNullOrEmpty(env.ContentRootPath))
+        {
+            return virtualPath;
+        }
+        var physicalPath = Path.GetFullPath(inputFile);
+        var contentRoot = Path.GetFullPath(env.ContentRootPath);
+        if (!physicalPath.StartsWith(contentRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            return virtualPath;
+        }
+        var relative = Path.GetRelativePath(contentRoot, physicalPath)
+            .Replace(Path.DirectorySeparatorChar, '/')
+            .Replace(Path.AltDirectorySeparatorChar, '/');
+        return new VirtualPath('/' + relative);
     }
 
     internal override Type DefaultBaseType { get { return typeof(System.Web.UI.Page); } }
