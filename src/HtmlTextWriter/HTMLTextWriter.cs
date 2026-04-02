@@ -233,7 +233,6 @@ public class HtmlTextWriter : TextWriter
         }
         set
         {
-            Debug.Assert(value >= 0, "Bogus Indent... probably caused by mismatched Indent++ and Indent--");
             if (value < 0)
             {
                 value = 0;
@@ -1329,3 +1328,4 @@ public class HtmlTextWriter : TextWriter
         Other,
     }
 }
+
