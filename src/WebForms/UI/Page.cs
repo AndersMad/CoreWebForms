@@ -258,6 +258,7 @@ public partial class Page : TemplateControl, IHttpAsyncHandler
     // Http Intrinsics
     internal HttpRequest _request;
     internal HttpResponse _response;
+    internal HttpApplicationState _application;
     internal Cache _cache;
 
     internal string _errorPage;
@@ -601,7 +602,7 @@ public partial class Page : TemplateControl, IHttpAsyncHandler
     {
         get
         {
-            return _context.Application;
+            return _application;
         }
     }
 
@@ -1169,7 +1170,11 @@ public partial class Page : TemplateControl, IHttpAsyncHandler
         {
             if (_request == null)
             {
-                throw new HttpException(SR.GetString(SR.Request_not_available));
+                _request = Context?.Request;
+                if (_request == null)
+                {
+                    throw new HttpException(SR.GetString(SR.Request_not_available));
+                }
             }
 
             return _request;
@@ -1198,7 +1203,11 @@ public partial class Page : TemplateControl, IHttpAsyncHandler
         {
             if (_response == null)
             {
-                throw new HttpException(SR.GetString(SR.Response_not_available));
+                _response = Context?.Response;
+                if (_response == null)
+                {
+                    throw new HttpException(SR.GetString(SR.Response_not_available));
+                }
             }
 
             return _response;
@@ -1252,7 +1261,11 @@ public partial class Page : TemplateControl, IHttpAsyncHandler
         {
             if (_cache == null)
             {
-                throw new HttpException(SR.GetString(SR.Cache_not_available));
+                _cache = Context?.Cache;
+                if (_cache == null)
+                {
+                    throw new HttpException(SR.GetString(SR.Cache_not_available));
+                }
             }
 
             return _cache;
@@ -1425,7 +1438,11 @@ public partial class Page : TemplateControl, IHttpAsyncHandler
     {
         get
         {
-            Debug.Assert(_preInitWorkComplete || DesignMode, "ContainsTheme should not be accessed before Page's PreInit.");
+            if (!_preInitWorkComplete && !DesignMode)
+            {
+                return false;
+            }
+
             return _theme != null;
         }
     }
@@ -5670,6 +5687,7 @@ window.onload = WebForm_RestoreScrollPosition;
         _context = context;
         _request = context.Request;
         _response = context.Response;
+        _application = context.Application;
         _cache = context.Cache;
 
 #if PORT_UNKNOWN

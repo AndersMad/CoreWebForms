@@ -41,6 +41,14 @@ public class PageTests : HostedTestBase
     }
 
     [TestMethod]
+    public async Task PageApplicationIsAvailableDuringRequest()
+    {
+        var result = await RunPage<Page5>();
+
+        Assert.AreEqual("ok", result);
+    }
+
+    [TestMethod]
     public void ChildControlPageFallsBackToParentPage()
     {
         var page = new Page1();
@@ -113,6 +121,14 @@ public class PageTests : HostedTestBase
             form.Controls.Add(new TextBox());
 
             Controls.Add(form);
+        }
+    }
+
+    private sealed class Page5 : Page
+    {
+        protected override void Render(HtmlTextWriter writer)
+        {
+            writer.Write(Application != null ? "ok" : "null");
         }
     }
 
