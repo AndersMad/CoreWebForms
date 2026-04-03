@@ -49,6 +49,14 @@ public class PageTests : HostedTestBase
     }
 
     [TestMethod]
+    public async Task HtmlFormActionPreservesQueryString()
+    {
+        var result = await RunPage<Page4>(path: "/?a=b&c=d");
+
+        StringAssert.Contains(result, "action=\"/?a=b&amp;c=d\"");
+    }
+
+    [TestMethod]
     public void ChildControlPageFallsBackToParentPage()
     {
         var page = new Page1();

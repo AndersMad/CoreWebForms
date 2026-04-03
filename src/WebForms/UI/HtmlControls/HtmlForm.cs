@@ -344,7 +344,15 @@ public class HtmlForm : HtmlContainerControl
 
         return action;
 #endif
-        return Context.Request.Path ?? "./";
+        var action = Context.Request.Url.AbsolutePath;
+        var queryString = Page?.ClientQueryString;
+
+        if (!String.IsNullOrEmpty(queryString))
+        {
+            action += "?" + queryString.TrimStart('?');
+        }
+
+        return action;
     }
 
     /// <internalonly/>

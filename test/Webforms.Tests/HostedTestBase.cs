@@ -12,10 +12,11 @@ namespace WebForms.Tests;
 
 public abstract class HostedTestBase
 {
-    protected async Task<string> RunPage<TPage>(Action<IServiceCollection>? servicesConfigure = null, string? path=null)
+    protected async Task<string> RunPage<TPage>(Action<IServiceCollection>? servicesConfigure = null, string? path = null, string? handlerPath = null)
         where TPage : Page, new()
     {
         path ??= "/";
+        handlerPath ??= "/";
         using var host = await Host.CreateDefaultBuilder()
             .ConfigureWebHost(app =>
             {
@@ -37,7 +38,7 @@ public abstract class HostedTestBase
                     services.AddSystemWebAdapters()
                         .AddWrappedAspNetCoreSession()
                         .AddHttpApplication<HttpApplication>()
-                        .AddHttpHandler<TPage>("/")
+                        .AddHttpHandler<TPage>(handlerPath)
                         .AddWebForms();
 
                     servicesConfigure?.Invoke(services);

@@ -738,7 +738,7 @@ public partial class Page : TemplateControl, IHttpAsyncHandler
                     _clientQueryString = String.Empty;
                 }
 #else
-                _clientQueryString = ((HttpContextCore)Context).Request.QueryString.ToString();
+                _clientQueryString = ((HttpContextCore)Context).Request.QueryString.ToString().TrimStart('?');
 #endif
             }
 
