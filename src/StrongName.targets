@@ -24,7 +24,8 @@
 
   <PropertyGroup Condition="'$(SignAssembly)' != 'false'">
     <DelaySign>false</DelaySign>
-    <PublicSign>true</PublicSign>
+    <PublicSign Condition="'$(OS)' == 'Windows_NT' and '$(FullAssemblySigningSupported)' != 'false' and '$(StrongNameKeyId)' == ''">false</PublicSign>
+    <PublicSign Condition="'$(PublicSign)' == ''">true</PublicSign>
   </PropertyGroup>
 
   <!-- Binaries are delay or public-signed with one of these keys; later, the signing system will finish the strong-name signing. -->
