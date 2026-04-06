@@ -35,12 +35,14 @@ public class JavaScriptSerializer
 
     public JavaScriptSerializer()
     {
+        _options.Converters.Add(new InferredObjectJsonConverter());
         _options.Converters.Add(new JsonStringEnumConverter());
     }
 
     public JavaScriptSerializer(JavaScriptTypeResolver? resolver)
     {
         _typeResolver = resolver;
+        _options.Converters.Add(new InferredObjectJsonConverter());
         _options.Converters.Add(new JsonStringEnumConverter());
     }
 
@@ -605,6 +607,91 @@ public class JavaScriptSerializer
                 reader.Read();
 
                 if (ReadObject(ref reader, options) is { } value)
+                {
+                    dictionary.Add(propertyName, value);
+                }
+            }
+
+            return dictionary;
+        }
+    }
+
+    private sealed class InferredObjectJsonConverter : JsonConverter<object>
+    {
+        public override bool CanConvert(Type typeToConvert) => typeToConvert == typeof(object);
+
+        public override object? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            => ReadObject(ref reader);
+
+        public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options)
+        {
+            if (value is null)
+            {
+                writer.WriteNullValue();
+                return;
+            }
+
+            JsonSerializer.Serialize(writer, value, value.GetType(), options);
+        }
+
+        private static object? ReadObject(ref Utf8JsonReader reader)
+        {
+            switch (reader.TokenType)
+            {
+                case JsonTokenType.String:
+                    return reader.GetString();
+                case JsonTokenType.False:
+                    return false;
+                case JsonTokenType.True:
+                    return true;
+                case JsonTokenType.Null:
+                    return null;
+                case JsonTokenType.Number:
+                    if (reader.TryGetInt64(out var result))
+                    {
+                        return result;
+                    }
+                    return reader.GetDecimal();
+                case JsonTokenType.StartObject:
+                    return ReadDictionary(ref reader);
+                case JsonTokenType.StartArray:
+                    var list = new ArrayList();
+                    while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+                    {
+                        list.Add(ReadObject(ref reader));
+                    }
+                    return list;
+                default:
+                    throw new JsonException($"'{reader.TokenType}' is not supported");
+            }
+        }
+
+        private static Dictionary<string, object> ReadDictionary(ref Utf8JsonReader reader)
+        {
+            var dictionary = new Dictionary<string, object>();
+
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndObject)
+                {
+                    return dictionary;
+                }
+
+                if (reader.TokenType != JsonTokenType.PropertyName)
+                {
+                    throw new JsonException("JsonTokenType was not PropertyName");
+                }
+
+                var propertyName = reader.GetString();
+
+                if (string.IsNullOrWhiteSpace(propertyName))
+                {
+                    throw new JsonException("Failed to get property name");
+                }
+
+                reader.Read();
+
+                if (ReadObject(ref reader) is { } value)
                 {
                     dictionary.Add(propertyName, value);
                 }

@@ -1,30 +1,28 @@
 // MIT License.
 
 using System.Reflection;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace WebForms.Extensions.Tests
 {
-    [TestClass]
+    [Microsoft.VisualStudio.TestTools.UnitTesting.TestClass]
     public class ReflectionBundleResolverTests
     {
-        [TestMethod]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethod]
         public void ReflectionBundleResolverUsesLoadedBundleResolverType()
         {
             var extensionsAssembly = typeof(System.Web.UI.ScriptManager).Assembly;
             var resolverType = extensionsAssembly.GetType("WebForms.Extensions.ReflectionBundleResolver", throwOnError: true);
-            Assert.IsNotNull(resolverType);
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsNotNull(resolverType);
 
             var createLoggerMethod = typeof(ReflectionBundleResolverTests)
                 .GetMethod(nameof(CreateNullLogger), BindingFlags.Static | BindingFlags.NonPublic)!
                 .MakeGenericMethod(resolverType);
             var logger = createLoggerMethod
                 .Invoke(null, null);
-            Assert.IsNotNull(logger);
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsNotNull(logger);
 
             var resolver = Activator.CreateInstance(resolverType, [logger]);
-            Assert.IsNotNull(resolver);
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsNotNull(resolver);
 
             var isBundleVirtualPath = (bool)resolverType
                 .GetMethod("IsBundleVirtualPath", BindingFlags.Instance | BindingFlags.Public)!
@@ -36,13 +34,13 @@ namespace WebForms.Extensions.Tests
                 .GetMethod("GetBundleContents", BindingFlags.Instance | BindingFlags.Public)!
                 .Invoke(resolver, ["/scripts/asp-form.js"])!).ToArray();
 
-            Assert.IsTrue(isBundleVirtualPath);
-            Assert.AreEqual("/scripts/asp-form.js?v=test", bundleUrl);
-            CollectionAssert.AreEqual(new[] { "Focus.js", "WebForms.js" }, bundleContents);
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.IsTrue(isBundleVirtualPath);
+            Microsoft.VisualStudio.TestTools.UnitTesting.Assert.AreEqual("/scripts/asp-form.js?v=test", bundleUrl);
+            Microsoft.VisualStudio.TestTools.UnitTesting.CollectionAssert.AreEqual(new[] { "Focus.js", "WebForms.js" }, bundleContents);
         }
 
         private static object CreateNullLogger<T>()
-            => NullLogger<T>.Instance;
+            => Microsoft.Extensions.Logging.Abstractions.NullLogger<T>.Instance;
     }
 }
 

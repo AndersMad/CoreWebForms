@@ -1,11 +1,9 @@
 // MIT License.
 
 using System.Collections;
-using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Web.Script.Serialization;
 using System.Web.UI.WebControls;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace WebForms.Extensions.Tests;
 
@@ -21,7 +19,7 @@ public class JavascriptSerializerTest
         var listItemCollection = GetListItemCollection();
         var result = serializer.Serialize(listItemCollection);
         Assert.IsNotNull(result);
-        var recoveredList = serializer.Deserialize<ListItemCollection>(result);
+        var recoveredList = serializer.Deserialize<ListItemCollection>(result)!;
 
         Assert.AreEqual(listItemCollection.Count, recoveredList.Count);
         CheckListItemCollection(recoveredList, listItemCollection);
@@ -39,7 +37,7 @@ public class JavascriptSerializerTest
         var result = serializer.Serialize(list);
         Assert.IsNotNull(result);
 
-        var recoveredList = serializer.Deserialize<List<ListItemCollection>>(result);
+        var recoveredList = serializer.Deserialize<List<ListItemCollection>>(result)!;
         Assert.AreEqual(list.Count, recoveredList.Count);
         for (int i = 0; i < recoveredList.Count; i++)
         {
@@ -69,10 +67,9 @@ public class JavascriptSerializerTest
         var result = serializer.Serialize(customer);
         Assert.IsNotNull(result);
 
-        var recoveredList = serializer.Deserialize<CustomObject>(result);
+        var recoveredList = serializer.Deserialize<CustomObject>(result)!;
         Assert.AreEqual(customer.Name, recoveredList.Name);
         CheckListItemCollection(customer.Items, recoveredList.Items);
-
     }
 
     [TestMethod]
@@ -88,11 +85,10 @@ public class JavascriptSerializerTest
         var result = serializer.Serialize(customer);
         Assert.IsNotNull(result);
 
-        var recoveredList = serializer.Deserialize<Customer>(result);
+        var recoveredList = serializer.Deserialize<Customer>(result)!;
         Assert.AreEqual(customer.Name, recoveredList.Name);
         recoveredList.Numbers.ForEach(n => Assert.IsTrue(customer.Numbers.Contains(n)));
         recoveredList.Dictionary.ToList().ForEach(kvp => Assert.IsTrue(customer.Dictionary.ContainsKey(kvp.Key)));
-
     }
 
     [TestMethod]
@@ -143,6 +139,36 @@ public class JavascriptSerializerTest
         Assert.AreEqual(weatherForecast.TemperatureRanges.Count, weatherForecast2.TemperatureRanges.Count); 
     }
 
+    [TestMethod]
+    public void JavaScriptDeserializeDictionaryObjectUsesPrimitiveClrTypes()
+    {
+        var serializer = new JavaScriptSerializer();
+        const string json =
+            """
+            {
+              "valueAsString": "2026-04-06",
+              "valueAsBool": true,
+              "valueAsInt": 42,
+              "nested": {
+                "selectedDate": "2026-04-06"
+              }
+            }
+            """;
+
+        var result = serializer.Deserialize<Dictionary<string, object>>(json);
+
+        Assert.IsNotNull(result);
+        Assert.IsInstanceOfType<string>(result["valueAsString"]);
+        Assert.AreEqual("2026-04-06", (string)result["valueAsString"]);
+        Assert.IsInstanceOfType<bool>(result["valueAsBool"]);
+        Assert.AreEqual(true, (bool)result["valueAsBool"]);
+        Assert.IsInstanceOfType<long>(result["valueAsInt"]);
+        Assert.AreEqual(42L, (long)result["valueAsInt"]);
+        Assert.IsInstanceOfType<Dictionary<string, object>>(result["nested"]);
+
+        var nested = (Dictionary<string, object>)result["nested"];
+        Assert.AreEqual("2026-04-06", (string)nested["selectedDate"]);
+    }
 
     public class WeatherForecast
     {
@@ -161,21 +187,20 @@ public class JavascriptSerializerTest
         public int Low { get; set; }
     }
 
-
-public class Customer
+    public class Customer
     {
-        public string Name { get; set; }
-        public List<Int32> Numbers { get; set; }
-        public Dictionary<string, string> Dictionary { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public List<int> Numbers { get; set; } = [];
+        public Dictionary<string, string> Dictionary { get; set; } = [];
     }
 
     public class CustomObject
     {
-        public string Name { get; set; }
-        public ListItemCollection Items { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public ListItemCollection Items { get; set; } = new();
     }
 
-    private void CheckListItemCollection(ListItemCollection listItemCollection, ListItemCollection recoveredList)
+    private static void CheckListItemCollection(ListItemCollection listItemCollection, ListItemCollection recoveredList)
     {
         Assert.AreEqual(listItemCollection.Count, recoveredList.Count);
         for (int i = 0; i < listItemCollection.Count; i++)
@@ -184,7 +209,7 @@ public class Customer
         }
     }
 
-    private ListItemCollection GetListItemCollection()
+    private static ListItemCollection GetListItemCollection()
     {
         ListItemCollection list = new ListItemCollection();
         list.Add(new ListItem("1", "First Item"));
@@ -193,9 +218,8 @@ public class Customer
         return list;
     }
 
-    internal class ListItemCollectionConverter : JavaScriptConverter
+    internal sealed class ListItemCollectionConverter : JavaScriptConverter
     {
-
         public override IEnumerable<Type> SupportedTypes
             //Define the ListItemCollection as a supported type.
             => [typeof(ListItemCollection)];
@@ -227,7 +251,7 @@ public class Customer
         public override object Deserialize(IDictionary<string, object> dictionary, Type type, JavaScriptSerializer serializer)
         {
             if (dictionary == null)
-                throw new ArgumentNullException("dictionary");
+                throw new ArgumentNullException(nameof(dictionary));
 
             if (type == typeof(ListItemCollection))
             {
@@ -235,13 +259,13 @@ public class Customer
                 ListItemCollection list = new ListItemCollection();
 
                 // Deserialize the ListItemCollection's items.
-                ArrayList itemsList = (ArrayList)dictionary["List"];
+                ArrayList itemsList = (ArrayList)dictionary["List"]!;
                 for (int i = 0; i < itemsList.Count; i++)
-                    list.Add(serializer.ConvertToType<ListItem>(itemsList[i]));
+                    list.Add(serializer.ConvertToType<ListItem>(itemsList[i]!));
 
                 return list;
             }
-            return null;
+            return null!;
         }
     }
 }
