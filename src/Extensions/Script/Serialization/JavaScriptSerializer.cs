@@ -562,11 +562,7 @@ public class JavaScriptSerializer
                 case JsonTokenType.Null:
                     return null;
                 case JsonTokenType.Number:
-                    if (reader.TryGetInt64(out var result))
-                    {
-                        return result;
-                    }
-                    return reader.GetDecimal();
+                    return ReadNumber(ref reader);
                 case JsonTokenType.StartObject:
                     return ReadDictionary(ref reader, options);
                 case JsonTokenType.StartArray:
@@ -579,6 +575,21 @@ public class JavaScriptSerializer
                 default:
                     throw new JsonException($"'{reader.TokenType}' is not supported");
             }
+        }
+
+        private static object ReadNumber(ref Utf8JsonReader reader)
+        {
+            if (reader.TryGetInt32(out var int32))
+            {
+                return int32;
+            }
+
+            if (reader.TryGetInt64(out var int64))
+            {
+                return int64;
+            }
+
+            return reader.GetDecimal();
         }
 
         private static Dictionary<string, object> ReadDictionary(ref Utf8JsonReader reader, JsonSerializerOptions options)
@@ -647,11 +658,7 @@ public class JavaScriptSerializer
                 case JsonTokenType.Null:
                     return null;
                 case JsonTokenType.Number:
-                    if (reader.TryGetInt64(out var result))
-                    {
-                        return result;
-                    }
-                    return reader.GetDecimal();
+                    return ReadNumber(ref reader);
                 case JsonTokenType.StartObject:
                     return ReadDictionary(ref reader);
                 case JsonTokenType.StartArray:
@@ -664,6 +671,21 @@ public class JavaScriptSerializer
                 default:
                     throw new JsonException($"'{reader.TokenType}' is not supported");
             }
+        }
+
+        private static object ReadNumber(ref Utf8JsonReader reader)
+        {
+            if (reader.TryGetInt32(out var int32))
+            {
+                return int32;
+            }
+
+            if (reader.TryGetInt64(out var int64))
+            {
+                return int64;
+            }
+
+            return reader.GetDecimal();
         }
 
         private static Dictionary<string, object> ReadDictionary(ref Utf8JsonReader reader)
