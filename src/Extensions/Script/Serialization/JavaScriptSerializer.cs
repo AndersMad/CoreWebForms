@@ -566,12 +566,12 @@ public class JavaScriptSerializer
                 case JsonTokenType.StartObject:
                     return ReadDictionary(ref reader, options);
                 case JsonTokenType.StartArray:
-                    var list = new ArrayList();
+                    var list = new List<object?>();
                     while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                     {
                         list.Add(ReadObject(ref reader, options));
                     }
-                    return list;
+                    return list.ToArray();
                 default:
                     throw new JsonException($"'{reader.TokenType}' is not supported");
             }
@@ -662,12 +662,12 @@ public class JavaScriptSerializer
                 case JsonTokenType.StartObject:
                     return ReadDictionary(ref reader);
                 case JsonTokenType.StartArray:
-                    var list = new ArrayList();
+                    var list = new List<object?>();
                     while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                     {
                         list.Add(ReadObject(ref reader));
                     }
-                    return list;
+                    return list.ToArray();
                 default:
                     throw new JsonException($"'{reader.TokenType}' is not supported");
             }
