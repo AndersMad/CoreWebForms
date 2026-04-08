@@ -67,11 +67,23 @@ namespace System.Web.UI
         private string _focusedControlID;
         private Control _focusedControl;
         private bool _requireFocusScript;
+        private static readonly System.Reflection.MethodInfo SwitchWriterMethod =
+            typeof(HttpResponse).GetMethod("SwitchWriter", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic, null, [typeof(TextWriter)], null);
 
         public PageRequestManager(ScriptManager owner)
         {
             Debug.Assert(owner != null);
             _owner = owner;
+        }
+
+        private static TextWriter SwitchResponseWriter(HttpResponse response, TextWriter writer)
+        {
+            if (SwitchWriterMethod == null)
+            {
+                throw new NotImplementedException("Cannot switch writer");
+            }
+
+            return (TextWriter)SwitchWriterMethod.Invoke(response, [writer]);
         }
 
         public string AsyncPostBackSourceElementID
@@ -826,13 +838,12 @@ namespace System.Web.UI
                 // We must do this since data written via Response.Write will make the partial update
                 // response invalid.
 
-#if PORT_SWITCHWRITER
                 TextWriter oldWriter = null;
                 bool writerSwitched = false;
                 try
                 {
                     // beginning of possible direct Response.Writes
-                    oldWriter = page.Response.SwitchWriter(TextWriter.Null);
+                    oldWriter = SwitchResponseWriter(_owner.Page.Response, TextWriter.Null);
                     // if we cant switch the writer for some reason we need to know not to switch it back again in the finally block
                     // writerSwitched will be false
                     writerSwitched = true;
@@ -851,12 +862,9 @@ namespace System.Web.UI
                     // end of possible direct Response.Writes
                     if (writerSwitched)
                     {
-                        page.Response.SwitchWriter(oldWriter);
+                        SwitchResponseWriter(_owner.Page.Response, oldWriter);
                     }
                 }
-#else
-                throw new NotImplementedException("Cannot switch writer");
-#endif
             }
         }
 
