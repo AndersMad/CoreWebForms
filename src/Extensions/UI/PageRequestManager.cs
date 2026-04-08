@@ -8,6 +8,7 @@ using System.Security;
 using System.Text;
 using System.Web.UI.HtmlControls;
 using System.Web.Resources;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace System.Web.UI
 {
@@ -44,11 +45,7 @@ namespace System.Web.UI
 
         private const char LengthEncodeDelimiter = '|';
 
-#if PORT_SCRIPTMANAGER
         private const string FocusToken = "focus";
-        private static readonly Version MinimumW3CDomVersion = new Version(1, 0);
-        private static readonly Version MinimumEcmaScriptVersion = new Version(1, 0);
-#endif
 
         private readonly ScriptManager _owner;
 
@@ -574,16 +571,13 @@ namespace System.Web.UI
                 }
                 if (focusedControlId.Length > 0)
                 {
-#if PORT_FOCUS
                     // Register focus script library
-                    string focusResourceUrl = _owner.GetScriptResourceUrl("Focus.js", typeof(HtmlForm).Assembly);
+                    string focusResourceUrl = HttpRuntime.WebObjectActivator.GetRequiredService<IScriptResourceHandler>()
+                        .GetScriptResourceUrl(typeof(HtmlForm).Assembly, "Focus.js", CultureInfo.InvariantCulture, zip: false);
                     EncodeString(writer, ScriptBlockToken, "ScriptPath", focusResourceUrl);
 
                     // Send the target control ID to the client
                     EncodeString(writer, FocusToken, String.Empty, focusedControlId);
-#else
-                    throw new NotImplementedException("Focus not supported");
-#endif
                 }
             }
         }
