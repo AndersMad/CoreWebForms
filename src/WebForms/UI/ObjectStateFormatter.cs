@@ -77,6 +77,8 @@ public sealed class ObjectStateFormatter : IStateFormatter, IStateFormatter2
     private const byte Token_ZeroInt32 = 102;
     private const byte Token_True = 103;
     private const byte Token_False = 104;
+    private const string SqlFormattedNullMarker = "N";
+    private const string SqlFormattedValueMarker = "V:";
 
     // Known types for which we generate short type references
     // rather than assembly qualified names
@@ -543,19 +545,9 @@ public sealed class ObjectStateFormatter : IStateFormatter, IStateFormatter2
 
                     if (valueType != null)
                     {
-                        var converter = TypeDescriptor.GetConverter(valueType);
-                        // TypeDescriptor.GetConverter() will never return null.  The ref docs
-                        // for this method are incorrect.
-                        try
+                        if (!TryDeserializeFormattedValue(valueType, formattedValue, out result) && _throwOnErrorDeserializing)
                         {
-                            result = converter.ConvertFromInvariantString(formattedValue);
-                        }
-                        catch (Exception)
-                        {
-                            if (_throwOnErrorDeserializing)
-                            {
-                                throw;
-                            }
+                            throw new InvalidOperationException($"Unsupported formatted type {valueType.FullName}");
                         }
                     }
 
@@ -1073,14 +1065,11 @@ public sealed class ObjectStateFormatter : IStateFormatter, IStateFormatter2
                 // First try to get a type converter, and then resort to
                 // binary serialization if all else fails
 
-                var converter = TypeDescriptor.GetConverter(valueType);
-                bool canConvert = System.Web.UI.Util.CanConvertToFrom(converter, typeof(string));
-
-                if (canConvert)
+                if (TrySerializeFormattedValue(valueType, value, out var formattedValue))
                 {
                     writer.Write(Token_StringFormatted);
                     SerializeType(writer, valueType);
-                    writer.Write(converter.ConvertToInvariantString(null, value));
+                    writer.Write(formattedValue);
                 }
                 else
                 {
@@ -1112,5 +1101,97 @@ public sealed class ObjectStateFormatter : IStateFormatter, IStateFormatter2
 
     string IStateFormatter2.Serialize(object state, Purpose purpose) => Serialize(state, purpose);
     #endregion
+
+    private static bool TrySerializeFormattedValue(Type valueType, object value, out string formattedValue)
+    {
+        var converter = TypeDescriptor.GetConverter(valueType);
+        if (System.Web.UI.Util.CanConvertToFrom(converter, typeof(string)))
+        {
+            formattedValue = converter.ConvertToInvariantString(null, value);
+            return true;
+        }
+
+        return TrySerializeSqlFormattedValue(valueType, value, out formattedValue);
+    }
+
+    private static bool TryDeserializeFormattedValue(Type valueType, string formattedValue, out object result)
+    {
+        var converter = TypeDescriptor.GetConverter(valueType);
+        if (System.Web.UI.Util.CanConvertToFrom(converter, typeof(string)))
+        {
+            result = converter.ConvertFromInvariantString(formattedValue);
+            return true;
+        }
+
+        return TryDeserializeSqlFormattedValue(valueType, formattedValue, out result);
+    }
+
+    private static bool TrySerializeSqlFormattedValue(Type valueType, object value, out string formattedValue)
+    {
+        formattedValue = null;
+
+        if (valueType.Namespace != "System.Data.SqlTypes")
+        {
+            return false;
+        }
+
+        var isNullProperty = valueType.GetProperty("IsNull");
+        if (isNullProperty == null || isNullProperty.PropertyType != typeof(bool))
+        {
+            return false;
+        }
+
+        if ((bool)isNullProperty.GetValue(value))
+        {
+            formattedValue = SqlFormattedNullMarker;
+            return true;
+        }
+
+        formattedValue = SqlFormattedValueMarker + value.ToString();
+        return true;
+    }
+
+    private static bool TryDeserializeSqlFormattedValue(Type valueType, string formattedValue, out object result)
+    {
+        result = null;
+
+        if (valueType.Namespace != "System.Data.SqlTypes")
+        {
+            return false;
+        }
+
+        if (formattedValue == SqlFormattedNullMarker)
+        {
+            var nullProperty = valueType.GetProperty("Null");
+            if (nullProperty != null)
+            {
+                result = nullProperty.GetValue(null, null);
+                return true;
+            }
+
+            return false;
+        }
+
+        if (!formattedValue.StartsWith(SqlFormattedValueMarker, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var sqlValue = formattedValue.Substring(SqlFormattedValueMarker.Length);
+        var parseMethod = valueType.GetMethod("Parse", new[] { typeof(string) });
+        if (parseMethod != null)
+        {
+            result = parseMethod.Invoke(null, new object[] { sqlValue });
+            return true;
+        }
+
+        if (valueType.FullName == "System.Data.SqlTypes.SqlString")
+        {
+            result = Activator.CreateInstance(valueType, new object[] { sqlValue });
+            return true;
+        }
+
+        return false;
+    }
 }
 
