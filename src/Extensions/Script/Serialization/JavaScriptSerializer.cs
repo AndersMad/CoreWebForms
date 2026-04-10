@@ -57,7 +57,14 @@ public class JavaScriptSerializer
             throw new ArgumentException(AtlasWeb.JSON_MaxJsonLengthExceeded, nameof(input));
         }
 
-        return JsonSerializer.Deserialize(input, type, serializer._options);
+        var deserialized = JsonSerializer.Deserialize<object>(input, serializer._options);
+
+        if (type == typeof(object) || deserialized is null)
+        {
+            return deserialized;
+        }
+
+        return ObjectConverter.ConvertObjectToType(deserialized, type, serializer);
     }
 
     public int MaxJsonLength
@@ -616,11 +623,7 @@ public class JavaScriptSerializer
                 }
 
                 reader.Read();
-
-                if (ReadObject(ref reader, options) is { } value)
-                {
-                    dictionary.Add(propertyName, value);
-                }
+                dictionary.Add(propertyName, ReadObject(ref reader, options)!);
             }
 
             return dictionary;
@@ -712,11 +715,7 @@ public class JavaScriptSerializer
                 }
 
                 reader.Read();
-
-                if (ReadObject(ref reader) is { } value)
-                {
-                    dictionary.Add(propertyName, value);
-                }
+                dictionary.Add(propertyName, ReadObject(ref reader)!);
             }
 
             return dictionary;
