@@ -870,12 +870,9 @@ namespace System.Web.UI
             // unit tests for it. Instead we just use our own page, which is the
             // same instance anyway (but easier to test with).
 
-#if PORT_SCRIPTREFERENCE
-            HttpResponseBase response = _owner.IPage.Response;
-
+            HttpResponse response = _owner.Page.Response;
             response.ContentType = "text/plain";
             response.Cache.SetNoServerCaching();
-#endif
 
             // Write out the version identifier, which helps the client-side deal with the response
             // in a back-compatible way when there are changes made server-side.
