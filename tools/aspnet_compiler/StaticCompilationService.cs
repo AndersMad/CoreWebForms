@@ -41,11 +41,16 @@ internal sealed class StaticCompilationService : BackgroundService
             using var result = _compiler.CompilePages(compilation, stoppingToken);
 
             var errorsPath = Path.Combine(_options.Value.TargetDirectory, "webforms.errors.json");
+            var errorsTextPath = Path.Combine(_options.Value.TargetDirectory, "webforms.errors.txt");
             File.WriteAllText(errorsPath, JsonSerializer.Serialize(compilation.Errors, jsonOptions));
 
             if (compilation.Errors.Count > 0)
             {
-                throw new InvalidOperationException($"There were {compilation.Errors.Count} WebForms compilation error(s).");
+                var diagnosticLines = GetCompilationDiagnosticLines(compilation.Errors).ToArray();
+                File.WriteAllLines(errorsTextPath, diagnosticLines);
+                WriteCompilationDiagnostics(diagnosticLines);
+                throw new InvalidOperationException(
+                    $"There were {compilation.Errors.Count} WebForms compilation error(s). See '{errorsTextPath}' or '{errorsPath}' for details.");
             }
 
             var pagesPath = Path.Combine(_options.Value.TargetDirectory, "webforms.pages.json");
@@ -63,6 +68,29 @@ internal sealed class StaticCompilationService : BackgroundService
         }
 
         return Task.CompletedTask;
+    }
+
+    private static IReadOnlyList<string> GetCompilationDiagnosticLines(IEnumerable<ErrorDetails> errors)
+    {
+        var lines = new List<string>();
+
+        foreach (var pageError in errors)
+        {
+            foreach (var diagnostic in pageError.Diagnostics)
+            {
+                lines.Add(diagnostic.ToMsBuildString(pageError.Path));
+            }
+        }
+
+        return lines;
+    }
+
+    private static void WriteCompilationDiagnostics(IEnumerable<string> diagnosticLines)
+    {
+        foreach (var line in diagnosticLines)
+        {
+            Console.WriteLine(line);
+        }
     }
 
     private sealed record PageDetails(string Path, string Type, string Assembly);

@@ -101,12 +101,22 @@ public static class WebFormsCompilerExtensions
         {
             if (!_diagnosticsToSkip.Contains(d.Id))
             {
+                var location = d.Location;
+                var mappedSpan = location.GetMappedLineSpan();
+                var lineSpan = mappedSpan.IsValid ? mappedSpan : location.GetLineSpan();
+                var hasSourceLocation = location is { IsInSource: true } && lineSpan.IsValid;
+
                 yield return new RoslynError()
                 {
                     Id = d.Id,
                     Message = d.GetMessage(CultureInfo.CurrentCulture),
                     Severity = d.Severity,
-                    Location = d.Location.ToString(),
+                    Location = location.ToString(),
+                    FilePath = hasSourceLocation ? lineSpan.Path : null,
+                    StartLine = hasSourceLocation ? lineSpan.StartLinePosition.Line + 1 : null,
+                    StartColumn = hasSourceLocation ? lineSpan.StartLinePosition.Character + 1 : null,
+                    EndLine = hasSourceLocation ? lineSpan.EndLinePosition.Line + 1 : null,
+                    EndColumn = hasSourceLocation ? lineSpan.EndLinePosition.Character + 1 : null,
                 };
             }
         }

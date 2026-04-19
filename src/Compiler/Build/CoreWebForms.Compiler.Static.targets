@@ -19,6 +19,8 @@
       <_WebFormsTempDir>$([MSBuild]::NormalizeDirectory($(_WebFormsTempDir)))</_WebFormsTempDir>
       <_WebFormsPagesFileName>webforms.pages.json</_WebFormsPagesFileName>
       <_WebFormsPagesFile>$(_WebFormsTempDir)/$(_WebFormsPagesFileName)</_WebFormsPagesFile>
+      <_WebFormsErrorsFile>$(_WebFormsTempDir)webforms.errors.json</_WebFormsErrorsFile>
+      <_WebFormsErrorsTextFile>$(_WebFormsTempDir)webforms.errors.txt</_WebFormsErrorsTextFile>
     </PropertyGroup>
 
     <!-- Identify the inputs/outputs for the compiler so msbuild will know if things are out of date -->
@@ -67,7 +69,10 @@
     <WriteLinesToFile File="$(__AspNetCompileRspFilePath)" Lines="@(__AspNetCompileRsp)" Overwrite="true" />
 
     <!-- Invoke aspnet_compiler with the rsp file -->
-    <Exec Command="dotnet $(AspNetCompilePath) @$(__AspNetCompileRspFilePath)" ContinueOnError="true" />
+    <Exec Command="dotnet $(AspNetCompilePath) @$(__AspNetCompileRspFilePath)"
+          ContinueOnError="true"
+          IgnoreStandardErrorWarningFormat="true"
+          CustomErrorRegularExpression="^[A-Za-z]:\\.*\([0-9]+,[0-9]+\):\s*error\s+[A-Za-z]+[0-9]+:" />
 
     <!-- aspnet_compiler outputs a error file if there were compilation errors -->
     <PropertyGroup>
@@ -98,7 +103,12 @@
   </Target>
 
   <Target Name="NotifyGenericWebFormsCompilationError" AfterTargets="InvokeAspNetCompiler" BeforeTargets="NotifyWebFormsCompilationError" Condition="$(_HasWebFormsError)">
-    <Error Text="There was an error compiling WebForms assets." />
+    <ReadLinesFromFile File="$(_WebFormsErrorsTextFile)" Condition="Exists('$(_WebFormsErrorsTextFile)')">
+      <Output TaskParameter="Lines" ItemName="_WebFormsDiagnosticLine" />
+    </ReadLinesFromFile>
+    <Message Importance="High" Condition="'@(_WebFormsDiagnosticLine)' != ''" Text="WebForms diagnostics file: $(_WebFormsErrorsTextFile)" />
+    <Message Importance="High" Condition="'@(_WebFormsDiagnosticLine)' != ''" Text="%(_WebFormsDiagnosticLine.Identity)" />
+    <Error Text="There was an error compiling WebForms assets. See '$(_WebFormsErrorsTextFile)' or '$(_WebFormsErrorsFile)' for details." />
   </Target>
 
   <Target Name="AspNetCompilerNotFound" AfterTargets="WebFormsCompilation" Condition="!Exists($(AspNetCompilePath))">
