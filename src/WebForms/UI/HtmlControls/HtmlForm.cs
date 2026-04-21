@@ -344,8 +344,23 @@ public class HtmlForm : HtmlContainerControl
 
         return action;
 #endif
-        var action = Context.Request.Url.AbsolutePath;
+        var currentExecutionFilePath = Context.Request.CurrentExecutionFilePath;
+        var clientFilePath = Context.Request.RawUrl;
+        var queryIndex = clientFilePath.IndexOf('?');
+
+        if (queryIndex >= 0)
+        {
+            clientFilePath = clientFilePath[..queryIndex];
+        }
+
+        string action = UrlPath.MakeRelative(clientFilePath, currentExecutionFilePath);
+
         var queryString = Page?.ClientQueryString;
+
+        if (String.IsNullOrEmpty(action) && RenderingCompatibility >= VersionUtil.Framework45)
+        {
+            action = "./";
+        }
 
         if (!String.IsNullOrEmpty(queryString))
         {

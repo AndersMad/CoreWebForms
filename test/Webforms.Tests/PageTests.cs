@@ -53,7 +53,54 @@ public class PageTests : HostedTestBase
     {
         var result = await RunPage<Page4>(path: "/?a=b&c=d");
 
-        StringAssert.Contains(result, "action=\"/?a=b&amp;c=d\"");
+        StringAssert.Contains(result, "action=\"./?a=b&amp;c=d\"");
+    }
+
+    [TestMethod]
+    public async Task HtmlFormActionUsesExecutionPathRelativeToClientPathAfterRewrite()
+    {
+        var result = await RunPage<Page6>(path: "/friendly?a=b&c=d", handlerPath: "/friendly");
+
+        StringAssert.Contains(result, "action=\"rewritten.aspx?a=b&amp;c=d\"");
+    }
+
+    [TestMethod]
+    public async Task HtmlFormActionKeepsRewriteQueryOnFriendlyPath()
+    {
+        var result = await RunPage<Page7>(path: "/~/sample-site/ui/friendly-view.test?id=12345", handlerPath: "/~/sample-site/ui/friendly-view.test");
+
+        StringAssert.Contains(result, "action=\"../../../internal/base.aspx?id=12345&amp;formname=RewrittenForm\"");
+    }
+
+    [TestMethod]
+    public async Task HtmlFormActionKeepsEncodedNestedReturnUrlOnFriendlyRewrite()
+    {
+        var retUrl = "%2Fpreview%2Fitem.html%3Fbranch%3Dbranch-under-test";
+        var path = "/~/sample-site/ui/friendly-view.test?id=12345&returl=" + retUrl;
+        var result = await RunPage<Page8>(path: path, handlerPath: "/~/sample-site/ui/friendly-view.test");
+
+        StringAssert.Contains(result, "action=\"../../../internal/base.aspx?id=12345&amp;returl=%2Fpreview%2Fitem.html%3Fbranch%3Dbranch-under-test&amp;formname=RewrittenForm\"");
+    }
+
+    [TestMethod]
+    public async Task PostbackPreservesQueryStringOnRewriteTarget()
+    {
+        var result = await RunPagePost<Page9>(
+            path: "/internal/base.aspx?id=12345&returl=%2Fpreview%2Fitem.html%3Fbranch%3Dbranch-under-test&formname=RewrittenForm",
+            body: "__EVENTTARGET=&__EVENTARGUMENT=",
+            handlerPath: "/internal/base.aspx");
+
+        Assert.AreEqual("RewrittenForm|/preview/item.html?branch=branch-under-test", result);
+    }
+
+    [TestMethod]
+    public async Task EncodedNestedReturnUrlDoesNotBecomeTopLevelQueryParameter()
+    {
+        var result = await RunPage<Page10>(
+            path: "/path?id=12345&returl=%2Fpreview%2Fitem.html%3Fbranch%3Dbranch-under-test&formname=RewrittenForm",
+            handlerPath: "/path");
+
+        Assert.AreEqual("False||/preview/item.html?branch=branch-under-test", result);
     }
 
     [TestMethod]
@@ -137,6 +184,79 @@ public class PageTests : HostedTestBase
         protected override void Render(HtmlTextWriter writer)
         {
             writer.Write(Application != null ? "ok" : "null");
+        }
+    }
+
+    private sealed class Page6 : Page
+    {
+        protected override void OnPreInit(EventArgs e)
+        {
+            Context.RewritePath("/rewritten.aspx", string.Empty, "a=b&c=d", false);
+            base.OnPreInit(e);
+        }
+
+        protected override void FrameworkInitialize()
+        {
+            base.FrameworkInitialize();
+
+            var form = new HtmlForm();
+            form.Controls.Add(new TextBox());
+
+            Controls.Add(form);
+        }
+    }
+
+    private sealed class Page7 : Page
+    {
+        protected override void OnPreInit(EventArgs e)
+        {
+            Context.RewritePath("/internal/base.aspx", string.Empty, "id=12345&formname=RewrittenForm", false);
+            base.OnPreInit(e);
+        }
+
+        protected override void FrameworkInitialize()
+        {
+            base.FrameworkInitialize();
+
+            var form = new HtmlForm();
+            form.Controls.Add(new TextBox());
+
+            Controls.Add(form);
+        }
+    }
+
+    private sealed class Page8 : Page
+    {
+        protected override void OnPreInit(EventArgs e)
+        {
+            Context.RewritePath("/internal/base.aspx", string.Empty, "id=12345&returl=%2Fpreview%2Fitem.html%3Fbranch%3Dbranch-under-test&formname=RewrittenForm", false);
+            base.OnPreInit(e);
+        }
+
+        protected override void FrameworkInitialize()
+        {
+            base.FrameworkInitialize();
+
+            var form = new HtmlForm();
+            form.Controls.Add(new TextBox());
+
+            Controls.Add(form);
+        }
+    }
+
+    private sealed class Page9 : Page
+    {
+        protected override void Render(HtmlTextWriter writer)
+        {
+            writer.Write($"{Request.QueryString["formname"]}|{Request.QueryString["returl"]}");
+        }
+    }
+
+    private sealed class Page10 : Page
+    {
+        protected override void Render(HtmlTextWriter writer)
+        {
+            writer.Write((Request.QueryString["branch"] != null) + "|" + Request.QueryString["branch"] + "|" + Request.QueryString["returl"]);
         }
     }
 
