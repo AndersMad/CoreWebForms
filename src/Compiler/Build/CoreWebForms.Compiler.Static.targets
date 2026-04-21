@@ -61,8 +61,8 @@
       <__AspNetCompileRsp Include="-p &quot;$(_WebFormsInputDir)&quot;" />
       <__AspNetCompileRsp Condition="$(_WebFormsIsDebug)" Include="-d" />
       <__AspNetCompileRsp Include="&quot;$(_WebFormsTempDir)&quot;" />
-      <__AspNetCompileRsp Include="-r &quot;%(ReferencePath.Identity)&quot;" />
-      <__AspNetCompileRsp Include="-r &quot;%(IntermediateAssembly.Identity)&quot;" />
+      <__AspNetCompileRsp Include="-r &quot;%(ReferencePath.FullPath)&quot;" />
+      <__AspNetCompileRsp Include="-r &quot;%(IntermediateAssembly.FullPath)&quot;" />
       <__AspNetCompileRsp Include="-c &quot;%(WebFormsControlRegistration.Identity)|%(WebFormsControlRegistration.NamespaceName)|%(WebFormsControlRegistration.AssemblyName)&quot;" />
     </ItemGroup>
 

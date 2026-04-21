@@ -34,14 +34,15 @@ internal sealed class StaticCompilationService : BackgroundService
     {
         _logger.LogTrace("Starting static compilation");
 
+        var errorsPath = Path.Combine(_options.Value.TargetDirectory, "webforms.errors.json");
+        var errorsTextPath = Path.Combine(_options.Value.TargetDirectory, "webforms.errors.txt");
+
         try
         {
             var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
             var compilation = new PersistedCompilation(_options.Value);
             using var result = _compiler.CompilePages(compilation, stoppingToken);
 
-            var errorsPath = Path.Combine(_options.Value.TargetDirectory, "webforms.errors.json");
-            var errorsTextPath = Path.Combine(_options.Value.TargetDirectory, "webforms.errors.txt");
             File.WriteAllText(errorsPath, JsonSerializer.Serialize(compilation.Errors, jsonOptions));
 
             if (compilation.Errors.Count > 0)
@@ -60,6 +61,7 @@ internal sealed class StaticCompilationService : BackgroundService
         }
         catch (Exception ex)
         {
+            WriteUnexpectedFailureArtifacts(errorsPath, errorsTextPath, ex);
             _logger.LogCritical(ex, "Exception while compiling occurred");
         }
         finally
@@ -91,6 +93,27 @@ internal sealed class StaticCompilationService : BackgroundService
         {
             Console.WriteLine(line);
         }
+    }
+
+    private static void WriteUnexpectedFailureArtifacts(string errorsPath, string errorsTextPath, Exception ex)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(errorsPath)!);
+
+        File.WriteAllText(
+            errorsPath,
+            JsonSerializer.Serialize(
+                new
+                {
+                    FatalError = new
+                    {
+                        Type = ex.GetType().FullName,
+                        ex.Message,
+                        StackTrace = ex.ToString()
+                    }
+                },
+                new JsonSerializerOptions { WriteIndented = true }));
+        File.WriteAllText(errorsTextPath, ex.ToString());
+        Console.WriteLine(ex);
     }
 
     private sealed record PageDetails(string Path, string Type, string Assembly);
