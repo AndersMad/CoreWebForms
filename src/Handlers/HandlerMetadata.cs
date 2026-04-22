@@ -66,6 +66,11 @@ public static class HandlerMetadata
             {
                 Interlocked.Exchange(ref _handler, newHandler);
             }
+            else if (newHandler is IDisposable disposable)
+            {
+                // Match classic ASP.NET handler lifetime for per-request handler instances.
+                context.AsSystemWeb().DisposeOnPipelineCompleted(disposable);
+            }
 
             return newHandler;
         }

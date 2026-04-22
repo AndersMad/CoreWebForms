@@ -49,6 +49,17 @@ public class PageTests : HostedTestBase
     }
 
     [TestMethod]
+    public async Task PageIsDisposedAfterRequest()
+    {
+        DisposablePage.ResetDisposed();
+
+        var result = await RunPage<DisposablePage>();
+
+        Assert.AreEqual("disposed", result);
+        Assert.IsTrue(DisposablePage.DisposeSignal.Task.IsCompleted);
+    }
+
+    [TestMethod]
     public async Task HtmlFormActionPreservesQueryString()
     {
         var result = await RunPage<Page4>(path: "/?a=b&c=d");
@@ -257,6 +268,38 @@ public class PageTests : HostedTestBase
         protected override void Render(HtmlTextWriter writer)
         {
             writer.Write((Request.QueryString["branch"] != null) + "|" + Request.QueryString["branch"] + "|" + Request.QueryString["returl"]);
+        }
+    }
+
+    private sealed class DisposablePage : Page
+    {
+        public static TaskCompletionSource<object?> DisposeSignal { get; private set; } = CreateDisposedSource();
+
+        public static void ResetDisposed()
+        {
+            DisposeSignal = CreateDisposedSource();
+        }
+
+        protected override void FrameworkInitialize()
+        {
+            Controls.Add(new LiteralControl("disposed"));
+        }
+
+        public override void Dispose()
+        {
+            try
+            {
+                DisposeSignal.TrySetResult(null);
+            }
+            finally
+            {
+                base.Dispose();
+            }
+        }
+
+        private static TaskCompletionSource<object?> CreateDisposedSource()
+        {
+            return new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
         }
     }
 
