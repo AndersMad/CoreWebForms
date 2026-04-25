@@ -21,6 +21,7 @@ public static class ScriptManagerExtensions
 {
     public static IWebFormsBuilder AddScriptManager(this IWebFormsBuilder builder)
     {
+        System.Web.UI.AsyncPostBackRedirectHandler.EnsureRegistered();
         builder.Services.TryAddSingleton<ScriptResourceHandler>();
         builder.Services.AddSingleton<IScriptResourceHandler>(sp => sp.GetRequiredService<ScriptResourceHandler>());
         builder.Services.AddSingleton<IBundleResolver, ReflectionBundleResolver>();
