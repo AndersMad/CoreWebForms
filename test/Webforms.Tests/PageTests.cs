@@ -3,7 +3,6 @@
 using System.Web.UI;
 using System.Web.UI.HtmlControls;
 using System.Web.UI.WebControls;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace WebForms.Tests;
 

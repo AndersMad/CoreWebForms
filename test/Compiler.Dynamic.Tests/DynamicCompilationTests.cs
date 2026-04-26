@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using WebForms.Features;
 
 namespace Compiler.Dynamic.Tests;
@@ -27,7 +26,7 @@ public class DynamicCompilationTests
         _context = context;
     }
 
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("test01", "basic_page.aspx", "mapped-page")]
     [DataRow("test02", "code_behind.aspx")]
     [DataRow("test03", "page_with_master.aspx")]
