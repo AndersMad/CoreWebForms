@@ -57,7 +57,7 @@ internal static class TaskAsyncHelper
             throw new ArgumentException("Expected an async result", nameof(ar));
         }
 
-        taskWrapper.Task.GetAwaiter().GetResult();
+        AsyncBridge.Run(() => taskWrapper.Task);
     }
 
     private sealed class TaskWrapperAsyncResult : IAsyncResult
