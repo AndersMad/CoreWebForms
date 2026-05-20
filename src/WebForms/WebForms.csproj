@@ -26,7 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.CodeDom" Version="10.0.7" />
+    <PackageReference Include="System.CodeDom" Version="10.0.8" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(UseLocalSystemWebAdaptersSource)' == 'true' and Exists('..\..\..\systemweb-adapters\src\Microsoft.AspNetCore.SystemWebAdapters\Microsoft.AspNetCore.SystemWebAdapters.csproj')">
