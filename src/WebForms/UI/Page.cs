@@ -196,6 +196,11 @@ public partial class Page : TemplateControl, IHttpAsyncHandler
     private const string PageID = "__Page";
     private const string PageScrollPositionScriptKey = "PageScrollPositionScript";
     private const string PageReEnableControlsScriptKey = "PageReEnableControlsScript";
+    private const string AsyncPostBackRedirectLocationKey = "System.Web.UI.PageRequestManager:AsyncPostBackRedirectLocation";
+    private const string AsyncPostBackUpdatePanelVersionToken = "#";
+    private const string AsyncPostBackUpdatePanelVersionNumber = "4";
+    private const string AsyncPostBackPageRedirectToken = "pageRedirect";
+    private const string AsyncPostFormField = "__ASYNCPOST";
 
     // NOTE: Make sure this stays in sync with MobilePage.PageRegisteredControlsThatRequirePostBackKey
     // 
@@ -5279,7 +5284,10 @@ window.onload = WebForm_RestoreScrollPosition;
                 }
                 else
                 {
-                    RenderControl(CreateHtmlTextWriter(Response.Output));
+                    if (!TryWriteAsyncPostBackRedirectDelta())
+                    {
+                        RenderControl(CreateHtmlTextWriter(Response.Output));
+                    }
                 }
 
 #if PORT_LEGACYASYNC
@@ -5334,10 +5342,96 @@ window.onload = WebForm_RestoreScrollPosition;
             }
         }
 #else
+        catch (Exception) when (TryWriteAsyncPostBackRedirectDelta())
+        {
+        }
         catch (Exception e) when (HandleError(e))
         {
         }
 #endif
+    }
+
+    private bool TryWriteAsyncPostBackRedirectDelta()
+    {
+        if (Context.Items[AsyncPostBackRedirectLocationKey] != null)
+        {
+            return true;
+        }
+
+        if (!Response.IsRequestBeingRedirected || !IsAsyncPostBackRequest(Request))
+        {
+            return false;
+        }
+
+        string redirectLocation = Response.RedirectLocation;
+        if (String.IsNullOrEmpty(redirectLocation))
+        {
+            return false;
+        }
+
+        var cookies = new List<HttpCookie>(Response.Cookies.Count);
+        for (int i = 0; i < Response.Cookies.Count; i++)
+        {
+            cookies.Add(Response.Cookies[i]);
+        }
+
+        Response.ClearContent();
+        Response.ClearHeaders();
+        Response.StatusCode = 200;
+        for (int i = 0; i < cookies.Count; i++)
+        {
+            Response.AppendCookie(cookies[i]);
+        }
+
+        Response.Cache.SetCacheability(HttpCacheability.NoCache);
+        Response.ContentType = "text/plain";
+
+        Context.Items[AsyncPostBackRedirectLocationKey] = redirectLocation;
+        EncodeAsyncPostBackString(Response.Output, AsyncPostBackUpdatePanelVersionToken, String.Empty, AsyncPostBackUpdatePanelVersionNumber);
+
+        string[] redirectLocationParts = redirectLocation.Split(' ');
+        for (int i = 0; i < redirectLocationParts.Length; i++)
+        {
+            redirectLocationParts[i] = HttpUtility.UrlEncode(redirectLocationParts[i]);
+        }
+        redirectLocation = String.Join(" ", redirectLocationParts);
+        EncodeAsyncPostBackString(Response.Output, AsyncPostBackPageRedirectToken, String.Empty, redirectLocation);
+
+        return true;
+    }
+
+    private static bool IsAsyncPostBackRequest(HttpRequest request)
+    {
+        string[] headerValues = request.Headers.GetValues("X-MicrosoftAjax");
+        if (headerValues != null)
+        {
+            for (int i = 0; i < headerValues.Length; i++)
+            {
+                string[] headerContents = headerValues[i].Split(',');
+                for (int j = 0; j < headerContents.Length; j++)
+                {
+                    if (headerContents[j].Trim() == "Delta=true")
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        string asyncPost = request.Form[AsyncPostFormField];
+        return !String.IsNullOrEmpty(asyncPost) && asyncPost.Trim() == "true";
+    }
+
+    private static void EncodeAsyncPostBackString(TextWriter writer, string type, string id, string content)
+    {
+        writer.Write(content.Length.ToString(CultureInfo.InvariantCulture));
+        writer.Write('|');
+        writer.Write(type);
+        writer.Write('|');
+        writer.Write(id);
+        writer.Write('|');
+        writer.Write(content);
+        writer.Write('|');
     }
 
     internal static WithinCancellableCallbackTaskAwaitable GetWaitForPreviousStepCompletionAwaitable()
