@@ -50,8 +50,12 @@ internal sealed class StaticCompilationService : BackgroundService
                 var diagnosticLines = GetCompilationDiagnosticLines(compilation.Errors).ToArray();
                 File.WriteAllLines(errorsTextPath, diagnosticLines);
                 WriteCompilationDiagnostics(diagnosticLines);
-                throw new InvalidOperationException(
-                    $"There were {compilation.Errors.Count} WebForms compilation error(s). See '{errorsTextPath}' or '{errorsPath}' for details.");
+                _logger.LogError(
+                    "There were {Count} WebForms compilation error(s). See '{ErrorsTextPath}' or '{ErrorsPath}' for details.",
+                    compilation.Errors.Count,
+                    errorsTextPath,
+                    errorsPath);
+                return Task.CompletedTask;
             }
 
             var pagesPath = Path.Combine(_options.Value.TargetDirectory, "webforms.pages.json");
