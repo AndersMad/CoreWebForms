@@ -123,8 +123,11 @@ public sealed class ObjectStateFormatter : IStateFormatter, IStateFormatter2
     {
     }
 
+    private readonly Page _page;
+
     public ObjectStateFormatter(Page page, bool b)
     {
+        _page = page;
     }
 
     /// <devdoc>
@@ -262,7 +265,8 @@ public sealed class ObjectStateFormatter : IStateFormatter, IStateFormatter2
         {
             if (_protector is null)
             {
-                var provider = HttpContext.Current.AsAspNetCore().RequestServices.GetDataProtectionProvider();
+                var context = _page?.Context ?? HttpContext.Current;
+                var provider = context.AsAspNetCore().RequestServices.GetDataProtectionProvider();
                 _protector = provider.CreateProtector("SystemWebForms");
             }
 
