@@ -50,7 +50,7 @@ This will make use of `Microsoft.AspNetCore.SystemWebAdapters` to provide the `S
     <Project Sdk="CoreWebForms.Sdk/0.2.1">
 
         <PropertyGroup>
-            <TargetFrameworks>net10.0</TargetFrameworks>
+            <TargetFrameworks>net11.0</TargetFrameworks>
             <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
             <!-- Optional, but easier to debug at runtime than compile time -->
             <EnableRuntimeAspxCompilation>true</EnableRuntimeAspxCompilation>
